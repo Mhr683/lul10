@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'Atelier Aurelia — Luxury Commerce Platform',
-          short_name: 'Atelier',
-          description: 'Production-grade luxury commerce platform and AI command center for PC, Mac, Android, and iOS.',
+          name: 'Online Store',
+          short_name: 'Store',
+          description: 'Online store and management dashboard.',
           theme_color: '#141413',
           background_color: '#FBFBF9',
           display: 'standalone',

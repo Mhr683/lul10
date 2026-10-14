@@ -296,7 +296,11 @@ export interface ShippingZoneConfig {
 export interface StoreSettings {
   id: string;
   storeName: string;
+  tagline?: string;
+  logoUrl?: string;
+  address?: string;
   contactEmail: string;
+  supportEmail?: string;
   // Central Merchant & Currency Config
   merchantCountry: string; // 'PK'
   currency: string; // Base currency: 'PKR'
@@ -340,6 +344,9 @@ export interface StoreSettings {
   raastAccountTitle?: string;
   raastIban?: string;
   bankName?: string;
+  bankAccountTitle?: string;
+  bankAccountNumber?: string;
+  bankIban?: string;
   bankTransferInstructions?: string;
   guestCheckoutEnabled?: boolean;
   googleMapsApiKey?: string;

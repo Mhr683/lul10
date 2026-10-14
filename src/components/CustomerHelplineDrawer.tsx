@@ -49,11 +49,12 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
   }, [isOpen, initialTab]);
 
   // Contact details
-  const whatsappNumberRaw = settings.helplineWhatsApp || '923008472911';
-  const whatsappNumberFormatted = settings.helplineWhatsAppFormatted || '+92 300 8472911';
-  const emailAddress = settings.helplineEmail || 'concierge@atelieraurelia.com';
-  const phoneNumber = settings.helplinePhone || '+92 (042) 3578-9000';
-  const tollFreeNumber = '0800-2873542 (0800-AURELIA)';
+  const storeName = settings.storeName || 'Store';
+  const whatsappNumberRaw = settings.helplineWhatsApp || '';
+  const whatsappNumberFormatted = settings.helplineWhatsAppFormatted || settings.helplineWhatsApp || '';
+  const emailAddress = settings.supportEmail || settings.helplineEmail || settings.contactEmail || '';
+  const phoneNumber = settings.helplinePhone || '';
+  const tollFreeNumber = settings.helplinePhone || '';
 
   // ---------------------------------------------------------------------------
   // 1. AI CHAT STATE
@@ -62,14 +63,13 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
     {
       id: 'msg-welcome',
       role: 'assistant',
-      content:
-        'Assalam o Alaikum & Welcome to Atelier Aurelia Concierge.\n\nI am your 24/7 dedicated luxury client advisor. You can ask me in English, Urdu (اردو), or Roman Urdu regarding our collections, order tracking, Cash on Delivery (COD) in Pakistan, or immediate WhatsApp helpline assistance.\n\nHow may I assist you today?',
+      content: `Assalam o Alaikum & Welcome to ${storeName} Support.\n\nI am your 24/7 customer service assistant. You can ask me in English, Urdu (اردو), or Roman Urdu regarding our products, order tracking, payment methods in Pakistan, or WhatsApp helpline assistance.\n\nHow may I assist you today?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       suggestedActions: [
         'Track my order',
-        'JazzCash & COD payment rules',
-        'Swiss Watches warranty & authenticity',
-        'Connect to WhatsApp agent (+92 300 8472911)',
+        'Payment methods (COD & Bank Transfer)',
+        'Delivery & shipping times',
+        whatsappNumberFormatted ? `Connect on WhatsApp (${whatsappNumberFormatted})` : 'Contact customer support',
       ],
     },
   ]);
@@ -116,6 +116,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
           message: text,
           history: historyPayload,
           orderNumber: orderQueryNumber || undefined,
+          settings,
         }),
       });
 
@@ -136,7 +137,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
           role: 'assistant',
           content:
             data.fallbackReply ||
-            `Thank you for contacting Atelier Aurelia Helpline. Our team is available 24/7 on WhatsApp (${whatsappNumberFormatted}) and email (${emailAddress}).`,
+            `Thank you for contacting ${storeName} Helpline. Our team is available on WhatsApp (${whatsappNumberFormatted || 'our helpline'}) and email (${emailAddress || 'support'}).`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
         setMessages((prev) => [...prev, fallbackMsg]);
@@ -145,7 +146,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
       const errMsg: CustomerHelplineMessage = {
         id: 'ast-err-' + Date.now(),
         role: 'assistant',
-        content: `Thank you for reaching out. Our concierge desk is standing by 24/7 on WhatsApp (${whatsappNumberFormatted}) and email (${emailAddress}).`,
+        content: `Thank you for reaching out. Our support desk is standing by on WhatsApp (${whatsappNumberFormatted || 'our helpline'}) and email (${emailAddress || 'support'}).`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errMsg]);
@@ -159,14 +160,13 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
       {
         id: 'msg-welcome-fresh',
         role: 'assistant',
-        content:
-          'Assalam o Alaikum! Conversation refreshed. How may I assist your Atelier Aurelia inquiry today?',
+        content: `Assalam o Alaikum! Conversation refreshed. How may I assist your inquiry with ${storeName} today?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         suggestedActions: [
           'Track my order',
           'Cash on Delivery rules in Pakistan',
-          'WhatsApp concierge number',
-          '30-Day return policy',
+          'WhatsApp support',
+          'Return & exchange policy',
         ],
       },
     ]);
@@ -176,7 +176,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
   // 2. WHATSAPP STATE
   // ---------------------------------------------------------------------------
   const [whatsappTemplate, setWhatsappTemplate] = useState(
-    'Assalam o Alaikum Atelier Concierge, I would like assistance with an inquiry.'
+    `Assalam o Alaikum, I would like assistance with an inquiry at ${storeName}.`
   );
   const [copiedWhatsapp, setCopiedWhatsapp] = useState(false);
 
@@ -262,15 +262,15 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
     },
     {
       q: 'How do I track my order status in real time?',
-      a: 'You can track orders directly through our AI Concierge by sharing your Order Number (e.g., AA-ORD-9021), or via the "Account > Orders" tab on our storefront. Real-time TCS / Leopards tracking links are also sent via Email and SMS.',
+      a: 'You can track orders directly through our AI Assistant by sharing your Order Number (e.g., ORD-104928), or via the "Account > Orders" tab on our storefront. Real-time courier tracking links are also sent via Email and SMS.',
     },
     {
-      q: 'What is your authentic luxury guarantee & warranty?',
-      a: 'Every timepiece and leather piece is accompanied by a stamped Certificate of Authenticity with its individual serial number. Swiss mechanical timepieces include a 2-Year International Maison Warranty covering calibres and movements.',
+      q: 'What is your product warranty or quality guarantee?',
+      a: 'Every product is inspected for quality before dispatch. Please reach out to customer support if you receive a damaged or incorrect item.',
     },
     {
       q: 'What is the return and exchange window?',
-      a: 'We provide a complimentary 30-Day White-Glove inspection window. If a piece does not completely exceed your expectations, our courier will collect it securely from your doorstep for an exchange or full refund.',
+      a: 'We provide an easy return and exchange policy. If you need assistance with an exchange, contact our support team with your order number.',
     },
   ];
 
@@ -280,7 +280,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Atelier Aurelia Customer Helpline and Concierge"
+      aria-label={`${storeName} Customer Helpline & Support`}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
     >
       <div className="bg-[#FBFBF9] text-[#141413] w-full max-w-2xl h-[92vh] max-h-[760px] flex flex-col shadow-2xl border border-black/15 rounded-xl overflow-hidden animate-in zoom-in-95 duration-150">
@@ -293,7 +293,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-semibold text-base sm:text-lg tracking-tight">
-                  Atelier Concierge & Helpline
+                  {storeName} Helpline &amp; Support
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-medium border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -328,7 +328,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>AI Concierge Chat</span>
+            <span>AI Support Chat</span>
           </button>
 
           <button
@@ -379,7 +379,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
             <div className="px-4 py-2 bg-amber-50 border-b border-amber-200/60 flex items-center justify-between text-[11px] text-amber-900 shrink-0">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                <strong>Aurelia AI:</strong> Speaks English, Urdu (اردو), and Roman Urdu. Order tracking & store answers.
+                <strong>AI Support:</strong> Speaks English, Urdu (اردو), and Roman Urdu. Order tracking &amp; store answers.
               </span>
               <button
                 type="button"
@@ -410,7 +410,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 mt-1 px-1 text-[10px] text-black/40">
-                      <span>{isAssistant ? 'Aurelia Concierge' : 'You'}</span>
+                      <span>{isAssistant ? `${storeName} Support` : 'You'}</span>
                       <span>·</span>
                       <span>{m.timestamp}</span>
                       {isAssistant && (
@@ -448,7 +448,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                 <div className="flex flex-col items-start">
                   <div className="bg-white border border-black/10 rounded-lg p-3 text-xs text-black/60 flex items-center gap-2 shadow-xs">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                    <span>Aurelia Concierge is consulting salon knowledge...</span>
+                    <span>AI Assistant is generating response...</span>
                   </div>
                 </div>
               )}
@@ -530,11 +530,11 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                     <span>Official 24/7 WhatsApp Helpline</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-display font-semibold tracking-tight text-white">
-                    Direct VIP Concierge Chat
+                    Direct WhatsApp Support
                   </h3>
                   <p className="text-xs text-emerald-100/80 leading-relaxed max-w-md">
-                    Connect directly with an Atelier client executive on WhatsApp for bespoke sizing,
-                    courier tracking, custom monogramming, or instantaneous Pakistan mobile wallet verification.
+                    Connect directly with our customer support on WhatsApp for order questions,
+                    courier tracking, or payment verification.
                   </p>
                 </div>
 
@@ -551,7 +551,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                     Helpline WhatsApp Number
                   </span>
                   <div className="text-lg sm:text-xl font-mono font-semibold text-white tracking-wider">
-                    {whatsappNumberFormatted}
+                    {whatsappNumberFormatted || 'Configured in Settings'}
                   </div>
                 </div>
 
@@ -599,19 +599,19 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                 {[
                   {
                     title: '📦 Order Status & Dispatch',
-                    text: 'Assalam o Alaikum Atelier Team, please provide a tracking dispatch update for my recent order.',
+                    text: `Assalam o Alaikum ${storeName} Team, please provide a tracking dispatch update for my recent order.`,
                   },
                   {
                     title: '💳 Payment Transfer (JazzCash/Bank)',
-                    text: 'Assalam o Alaikum, I have completed advance transfer via JazzCash / Raast and would like verification.',
+                    text: 'Assalam o Alaikum, I have completed advance transfer via Bank / Raast and would like verification.',
                   },
                   {
-                    title: '✨ Custom Monogramming & Bespoke',
-                    text: 'Hello, I am interested in custom gold foil monogramming on a leather tote or briefcase.',
+                    title: '✨ Product Availability & Questions',
+                    text: `Assalam o Alaikum, I have a question regarding product availability at ${storeName}.`,
                   },
                   {
-                    title: '🛍️ Product Inquiry & Sizing',
-                    text: 'Hello Atelier Concierge, could you please provide detailed dimensions and calfskin leather care guidance?',
+                    title: '🛍️ Order Assistance',
+                    text: `Hello ${storeName} Support, could you please assist me with placing an order?`,
                   },
                 ].map((item, idx) => (
                   <button
@@ -726,7 +726,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                   </button>
 
                   <a
-                    href={`mailto:${emailAddress}?subject=Atelier%20Aurelia%20Client%20Inquiry`}
+                    href={`mailto:${emailAddress}?subject=${encodeURIComponent(`${storeName} Support Request`)}`}
                     className="px-4 py-2 rounded bg-[#FBFBF9] hover:bg-white text-[#141413] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -743,7 +743,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                   Submit Support Ticket / Inquiry
                 </h4>
                 <p className="text-xs text-black/60 mt-0.5">
-                  Logged directly into our client management system. Our team replies within 15 minutes.
+                  Logged directly into our client management system. Our team replies promptly.
                 </p>
               </div>
 
@@ -752,7 +752,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                      <span className="font-semibold text-sm">Inquiry Logged & AI Auto-Replied!</span>
+                      <span className="font-semibold text-sm">Inquiry Logged &amp; AI Auto-Replied!</span>
                     </div>
                     <span className="text-[11px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold border border-emerald-300">
                       {submittedTicket.ticketNumber}
@@ -763,7 +763,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                     <div className="p-3.5 bg-white border border-[#C5A059]/30 rounded-md shadow-sm space-y-2 text-left">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-[#8F7029]">
                         <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-                        <span>Instant AI Concierge Auto-Reply:</span>
+                        <span>Instant AI Auto-Reply:</span>
                       </div>
                       <p className="text-xs text-[#2A2927] whitespace-pre-line leading-relaxed">
                         {submittedTicket.aiAutoReply}
@@ -772,7 +772,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                   )}
 
                   <p className="text-xs text-[#575653]">
-                    A confirmation dispatch has been sent to <strong>{submittedTicket.email}</strong>. Our human concierge officers will also follow up if required.
+                    A confirmation dispatch has been sent to <strong>{submittedTicket.email}</strong>. Our team will also follow up if required.
                   </p>
                   <button
                     type="button"
@@ -854,7 +854,7 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                         type="text"
                         value={ticketForm.orderNumber}
                         onChange={(e) => setTicketForm({ ...ticketForm, orderNumber: e.target.value })}
-                        placeholder="e.g. AA-ORD-9021"
+                        placeholder="e.g. ORD-104928"
                         className="w-full bg-[#FBFBF9] border border-black/15 rounded-md px-3 py-2 text-xs focus:outline-none focus:border-black"
                       />
                     </div>
@@ -870,12 +870,12 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
                         onChange={(e) => setTicketForm({ ...ticketForm, category: e.target.value })}
                         className="w-full bg-[#FBFBF9] border border-black/15 rounded-md px-3 py-2 text-xs focus:outline-none focus:border-black"
                       >
-                        <option value="ORDER_TRACKING">📦 Order Tracking & Courier Dispatch</option>
+                        <option value="ORDER_TRACKING">📦 Order Tracking &amp; Courier Dispatch</option>
                         <option value="PAYMENT_ASSISTANCE">💳 Payment Verification (COD / Wallets)</option>
-                        <option value="PRODUCT_INQUIRY">✨ Product Craftsmanship & Sizing</option>
-                        <option value="RETURNS_EXCHANGES">🔄 30-Day Returns & Exchanges</option>
-                        <option value="BESPOKE_REQUEST">🖋️ Bespoke Monogramming & Custom Orders</option>
-                        <option value="OTHER">💬 General Client Inquiry</option>
+                        <option value="PRODUCT_INQUIRY">✨ Product Questions &amp; Sizing</option>
+                        <option value="RETURNS_EXCHANGES">🔄 Returns &amp; Exchanges</option>
+                        <option value="BESPOKE_REQUEST">🖋️ Custom Orders &amp; Bulk Inquiries</option>
+                        <option value="OTHER">💬 General Customer Inquiry</option>
                       </select>
                     </div>
 
@@ -937,44 +937,51 @@ export const CustomerHelplineDrawer: React.FC<CustomerHelplineDrawerProps> = ({
               <div className="bg-white border border-black/10 rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-black/50">
-                    Direct VIP Concierge Line
+                    Direct Helpline Line
                   </span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 </div>
-                <div className="text-base font-mono font-semibold text-[#141413]">{phoneNumber}</div>
-                <p className="text-[11px] text-black/60">
-                  Headquarters client services for Pakistan orders, bespoke horology, and high-value inquiries.
-                </p>
-                <div className="pt-2">
-                  <a
-                    href={`tel:${phoneNumber.replace(/[^0-9+]/g, '')}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141413] text-[#FBFBF9] rounded text-xs font-medium hover:bg-[#2A2A28] transition-colors cursor-pointer"
-                  >
-                    <Phone className="w-3 h-3" />
-                    <span>Call Concierge Desk</span>
-                  </a>
+                <div className="text-base font-mono font-semibold text-[#141413]">
+                  {phoneNumber || 'Configured in Settings'}
                 </div>
+                <p className="text-[11px] text-black/60">
+                  Customer support line for orders, payment verification, and queries.
+                </p>
+                {phoneNumber && (
+                  <div className="pt-2">
+                    <a
+                      href={`tel:${phoneNumber.replace(/[^0-9+]/g, '')}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#141413] text-[#FBFBF9] rounded text-xs font-medium hover:bg-[#2A2A28] transition-colors cursor-pointer"
+                    >
+                      <Phone className="w-3 h-3" />
+                      <span>Call Support</span>
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white border border-black/10 rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-black/50">
-                    Pakistan Toll-Free UAN
+                    WhatsApp Helpline
                   </span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 </div>
-                <div className="text-base font-mono font-semibold text-[#141413]">{tollFreeNumber}</div>
+                <div className="text-base font-mono font-semibold text-[#141413]">
+                  {whatsappNumberFormatted || 'Configured in Settings'}
+                </div>
                 <p className="text-[11px] text-black/60">
-                  Toll-free across all landlines and mobile operators in Pakistan (Mon–Sun 9 AM to 11 PM PKT).
+                  Instant messaging on WhatsApp for immediate response and updates.
                 </p>
                 <div className="pt-2">
-                  <a
-                    href="tel:08002873542"
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchWhatsapp()}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 text-white rounded text-xs font-medium hover:bg-emerald-800 transition-colors cursor-pointer"
                   >
-                    <Phone className="w-3 h-3" />
-                    <span>Dial Toll-Free</span>
-                  </a>
+                    <MessageSquare className="w-3 h-3" />
+                    <span>Open WhatsApp</span>
+                  </button>
                 </div>
               </div>
             </div>

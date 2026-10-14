@@ -72,7 +72,7 @@ export class PaymentGatewayService {
           transactionId: `QUOTE-${txSuffix}`,
           paymentStatus: 'PENDING',
           isGatewayConfigured: false,
-          providerMessage: `International Shipping & Customs Quote Request logged. Awaiting concierge logistics rate review.`,
+          providerMessage: `International Shipping & Customs Quote Request logged. Awaiting logistics rate review.`,
         };
       case 'MANUAL':
       default:
@@ -100,23 +100,23 @@ export interface ShippingMethodOption {
 export const SHIPPING_METHODS: ShippingMethodOption[] = [
   {
     id: 'ship-standard',
-    name: 'Insured Armored Ground Courier',
-    carrier: 'DHL Express',
-    estimatedDays: '3–5 business days',
-    baseFee: 25,
+    name: 'Standard Ground Delivery',
+    carrier: 'TCS / Leopards Courier',
+    estimatedDays: '2–4 business days',
+    baseFee: 250,
   },
   {
     id: 'ship-Priority',
-    name: 'Priority Air Concierge',
-    carrier: 'FedEx International Priority',
+    name: 'Express Delivery',
+    carrier: 'Overnight Courier Express',
     estimatedDays: '1–2 business days',
-    baseFee: 55,
+    baseFee: 450,
   },
   {
     id: 'ship-pickup',
-    name: 'Atelier Flagship Private Collection',
-    carrier: 'In-Boutique Appointment',
-    estimatedDays: 'Ready in 2 hours',
+    name: 'Store Pickup',
+    carrier: 'Store Pickup Desk',
+    estimatedDays: 'Ready same day',
     baseFee: 0,
   },
 ];
@@ -158,11 +158,11 @@ export interface TransactionalEmailPayload {
 
 export class EmailNotificationService {
   static formatDispatchLog(payload: TransactionalEmailPayload): string {
-    return `[Concierge Dispatch Log -> ${payload.to}] (${payload.template}): ${payload.subject} — ${payload.summary}`;
+    return `[Notification Log -> ${payload.to}] (${payload.template}): ${payload.subject} — ${payload.summary}`;
   }
 
   static generatePaymentReceivedSubject(orderNumber: string, storeName: string): string {
-    return `Payment Recieved: Order #${orderNumber} | ${storeName}`;
+    return `Payment Received: Order #${orderNumber} | ${storeName}`;
   }
 }
 

@@ -281,7 +281,7 @@ const storeToolDeclarations: FunctionDeclaration[] = [
         costPrice: { type: Type.NUMBER, description: 'Unit cost price' },
         stock: { type: Type.INTEGER, description: 'Initial inventory count' },
         category: { type: Type.STRING, description: 'Category name (e.g. Leather Goods, Horology, Fragrance, Audio & Objects, Architectural Lighting)' },
-        brand: { type: Type.STRING, description: 'Brand name (default: Atelier Aurelia)' },
+        brand: { type: Type.STRING, description: 'Brand name' },
         shortDescription: { type: Type.STRING, description: 'Concise 1-2 sentence hook' },
         description: { type: Type.STRING, description: 'Detailed luxury craftsmanship description' },
         seoTitle: { type: Type.STRING, description: 'SEO title (max 150 chars)' },
@@ -933,7 +933,9 @@ app.post('/api/ai/command', requireAdmin, async (req, res) => {
     );
 
     const ai = getGenAIClient();
-    const systemInstruction = `You are the Autonomous AI Executive Operator for "${storeContext?.storeName || 'Atelier Aurelia'}", a dual-currency (${storeContext?.currency || 'USD'} & PKR) luxury commerce platform.
+    const storeName = storeContext?.storeName || 'Store';
+    const storeCurrency = storeContext?.currency || 'PKR';
+    const systemInstruction = `You are the AI Executive Operator for "${storeName}", a commerce platform (${storeCurrency}).
 Your role is to ACTUALLY OPERATE the store by invoking the provided function declarations whenever the admin asks to create/update/duplicate/delete products, adjust prices, manage inventory, generate SEO, rewrite descriptions, generate studio images, create/delete coupons, search/update/cancel/refund orders, search customers, import/export CSVs, or analyze store data.
 
 Current Live Store Snapshot:
@@ -1045,9 +1047,9 @@ app.post('/api/ai/generate-product-content', requireAdmin, async (req, res) => {
       model: 'gemini-3.8-flash',
       contents: `Generate complete e-commerce product content, bullet highlights, FAQ, social caption, ad copy, tags, and SEO metadata for:
 Product Name: ${name}
-Category: ${category || 'Luxury Goods'}
-Brand: ${brand || 'Atelier Aurelia'}
-Price: $${price || 450}
+Category: ${category || 'General'}
+Brand: ${brand || storeContext?.storeName || 'Store Brand'}
+Price: ${price || 0}
 Desired Tone: ${tone}`,
       config: {
         responseMimeType: 'application/json',
@@ -1376,7 +1378,7 @@ app.post('/api/maps/reverse-geocode', async (req, res) => {
         const osmResp = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`,
           {
-            headers: { 'User-Agent': 'AtelierAurelia/1.0 (commerce@atelieraurelia.luxury)' },
+            headers: { 'User-Agent': 'StoreApp/1.0 (info@store.local)' },
             signal: AbortSignal.timeout(4500),
           }
         );
@@ -2662,7 +2664,7 @@ app.post('/api/email/send-payment-receipt', (req, res) => {
     toEmail,
     customerName,
     orderNumber,
-    storeName = 'Atelier Aurelia',
+    storeName = 'Store',
     paymentMethod = 'Advance Payment',
     paymentSubMethod,
     paymentReference = 'N/A',
@@ -2678,9 +2680,9 @@ app.post('/api/email/send-payment-receipt', (req, res) => {
     return res.status(400).json({ error: 'Missing toEmail or orderNumber parameter.' });
   }
 
-  const safeStoreName = String(storeName).trim() || 'Atelier Aurelia';
+  const safeStoreName = String(storeName).trim() || 'Store';
   const safeOrderNumber = String(orderNumber).trim();
-  const safeCustomerName = String(customerName || 'Valued Patron').trim();
+  const safeCustomerName = String(customerName || 'Valued Customer').trim();
   const safeReference = String(paymentReference).trim() || 'TID Verified';
   const safeDistrict = String(district || '').trim();
   const safeTehsil = String(tehsil || '').trim();
@@ -2697,7 +2699,7 @@ app.post('/api/email/send-payment-receipt', (req, res) => {
     minute: '2-digit',
   });
 
-  const subject = `Payment Recieved: Order #${safeOrderNumber} | ${safeStoreName}`;
+  const subject = `Payment Received: Order #${safeOrderNumber} | ${safeStoreName}`;
 
   const destinationSummary = [
     shippingAddress,
@@ -2778,7 +2780,7 @@ Thank you for choosing ${safeStoreName}. Your order is now confirmed and entered
                     <div style="width: 28px; height: 28px; background-color: #10B981; border-radius: 50%; color: #FFFFFF; text-align: center; line-height: 28px; font-weight: bold; font-size: 15px;">✓</div>
                   </td>
                   <td valign="middle" style="padding-left: 10px;">
-                    <strong style="color: #065F46; font-size: 14px; display: block;">Apki Payment Recieved Ho Chuki Hy!</strong>
+                    <strong style="color: #065F46; font-size: 14px; display: block;">Apki Payment Received Ho Chuki Hai!</strong>
                     <span style="color: #047857; font-size: 12px;">Advance payment successfully received & verified for Order #${escapeHtml(safeOrderNumber)}.</span>
                   </td>
                 </tr>
@@ -2981,61 +2983,6 @@ interface CustomerTicket {
 
 const customerSupportTickets = new Map<string, CustomerTicket>();
 
-// Pre-seeded customer inquiries with AI auto-replies
-customerSupportTickets.set('tkt-init-01', {
-  id: 'tkt-init-01',
-  ticketNumber: 'TKT-2026-8812',
-  name: 'Hamza Malik',
-  email: 'hamza.m@example.com',
-  phone: '+92 321 4455667',
-  orderNumber: 'AA-ORD-9021',
-  category: 'ORDER_TRACKING',
-  subject: 'Tracking dispatch inquiry for Chronographe Calibre IX delivery in DHA Lahore',
-  message: 'Hello Atelier team, can you confirm if TCS Express tracking will be dispatched today?',
-  status: 'OPEN',
-  channel: 'AI_CHAT',
-  createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-  aiAutoReply: 'Dear Mr. Hamza, Assalam o Alaikum! Thank you for reaching out to Atelier Aurelia Concierge.\n\nYour order AA-ORD-9021 containing the Chronographe Calibre IX Titanium has cleared final horological calibration. TCS Express Armored Courier pickup is scheduled for 4:00 PM PKT today. Your live TCS consignment number will be SMS-dispatched automatically upon scan.\n\nFor expedited assistance, our WhatsApp VIP Concierge desk is standing by at +92 300 8472911.',
-  aiAutoRepliedAt: new Date(Date.now() - 3600000 * 3 + 12000).toISOString(),
-  aiAutoReplyStatus: 'SENT',
-});
-
-customerSupportTickets.set('tkt-init-02', {
-  id: 'tkt-init-02',
-  ticketNumber: 'TKT-2026-8813',
-  name: 'Ayesha Khan',
-  email: 'ayesha.k@example.com',
-  phone: '+92 301 8899221',
-  orderNumber: 'AA-ORD-9044',
-  category: 'BESPOKE_REQUEST',
-  subject: 'Custom leather engraving on Siena Structured Calfskin Tote',
-  message: 'Assalam o Alaikum, can we have initials A.K embossed in 24k gold foil on the inner leather tab?',
-  status: 'IN_PROGRESS',
-  channel: 'WHATSAPP',
-  createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
-  aiAutoReply: 'Walaikum Assalam Ms. Ayesha! Thank you for contacting Atelier Aurelia.\n\nYes, absolutely. Our Florentine leather atelier offers complimentary bespoke 24k gold foil monogramming (up to 3 characters) on the Siena Structured Calfskin Tote. We have placed a note on order AA-ORD-9044 for artisan monogramming "A.K".\n\nOur master leather craftsman will review the placement and confirm via WhatsApp (+92 300 8472911).',
-  aiAutoRepliedAt: new Date(Date.now() - 3600000 * 8 + 8000).toISOString(),
-  aiAutoReplyStatus: 'SENT',
-});
-
-customerSupportTickets.set('tkt-init-03', {
-  id: 'tkt-init-03',
-  ticketNumber: 'TKT-2026-8814',
-  name: 'Zainab Qureshi',
-  email: 'zainab.q@example.pk',
-  phone: '+92 333 5511223',
-  orderNumber: 'AA-ORD-9051',
-  category: 'PAYMENT_COD',
-  subject: 'JazzCash payment confirmation & delivery time in Islamabad',
-  message: 'Maine JazzCash se payment ki hai, kya payment receive ho gayi hai aur delivery Islamabad kab tak hogi?',
-  status: 'OPEN',
-  channel: 'WEB_FORM',
-  createdAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-  aiAutoReply: 'Walaikum Assalam Zainab Sahiba! Atelier Aurelia Concierge mein khush amdeed.\n\nAap ki JazzCash transaction verify ho chuki hai aur order AA-ORD-9051 packing phase mein hai. Islamabad ke liye hamari TCS Express courier delivery 24 se 48 ghantay ke andar complete ho jaye gi.\n\nJaise hi parcel courier ko handover hoga, aap ko SMS aur Email ke zariye tracking number receive ho jaye ga. Agar mazeed rehnumai chahiye ho to WhatsApp (+92 300 8472911) par hamari team 24/7 dastiyab hai.',
-  aiAutoRepliedAt: new Date(Date.now() - 3600000 * 1 + 6000).toISOString(),
-  aiAutoReplyStatus: 'SENT',
-});
-
 // POST /api/ai/customer-support
 // Dedicated 24/7 Client Helpline & AI Concierge using gemini-3.8-flash (Public with 10 req/min rate limit and 1000 char cap)
 app.post('/api/ai/customer-support', async (req, res) => {
@@ -3045,7 +2992,7 @@ app.post('/api/ai/customer-support', async (req, res) => {
       return res.status(429).json({ error: 'Rate limit reached (10 requests per minute). Please wait a moment.' });
     }
 
-    const { message, history, orderNumber } = req.body;
+    const { message, history, orderNumber, settings: clientSettings } = req.body;
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message cannot be empty.' });
     }
@@ -3054,44 +3001,49 @@ app.post('/api/ai/customer-support', async (req, res) => {
       return res.status(400).json({ error: 'Message exceeds maximum allowed limit of 1000 characters.' });
     }
 
+    const store = clientSettings || {};
+    const storeName = store.storeName || 'Store';
+    const storeTagline = store.tagline || '';
+    const currency = store.currency || 'PKR';
+    const whatsapp = store.helplineWhatsAppFormatted || store.helplineWhatsApp || '';
+    const email = store.supportEmail || store.helplineEmail || store.contactEmail || '';
+    const phone = store.helplinePhone || '';
+    const address = store.address || '';
+    const bankDetails = store.bankName
+      ? `${store.bankName} (Title: ${store.bankAccountTitle || 'Store Account'}, A/C: ${store.bankAccountNumber || store.bankIban || ''})`
+      : '';
+    const raastDetails = store.raastIban
+      ? `Raast ID/IBAN: ${store.raastIban} (Title: ${store.raastAccountTitle || storeName})`
+      : '';
+    const nayapayDetails = store.nayapayNumber
+      ? `NayaPay: ${store.nayapayNumber} (Title: ${store.nayapayAccountTitle || storeName})`
+      : '';
+
     const ai = getGenAIClient();
-    const systemPrompt = `You are "Aurelia Concierge" (آوریلیا کونسیرج), the dedicated 24/7 client helpline and customer support advisor for Atelier Aurelia luxury commerce platform.
+    const systemPrompt = `You are the dedicated 24/7 customer support advisor for "${storeName}", an online store operating in Pakistan (${currency}).
 
 Languages & Tone:
-- You speak fluent English, Urdu (اردو), and Roman Urdu (e.g., "Assalam o Alaikum! Main aap ki kis tarah madad kar sakta hoon?", "Aap ka order status...", "Delivery TCS ya Leopard ke zariye hoti hai").
+- You speak fluent English, Urdu (اردو), and Roman Urdu (e.g., "Assalam o Alaikum! Main aap ki kis tarah madad kar sakta hoon?", "Aap ka order status...", "Delivery TCS ya Leopards ke zariye hoti hai").
 - If the customer writes in Roman Urdu, Urdu, or English, reply naturally in the same language.
-- Maintain an exceptionally polite, refined, warm, and helpful luxury tone.
+- Maintain a polite, helpful, clear, and professional tone.
 
-Store Essentials:
-- Store Name: Atelier Aurelia
-- Collections: Leather Goods (Calfskin Totes, Briefcases, Cardholders), Horology (Swiss Calibre IX Flyback Chronographs, Tourbillons), Fragrance (Extraits de Parfum macerated in Grasse), Architectural Lighting (Solid unlacquered brass and honed travertine), Audio & Objects (Planar magnetic headphones, lathe-turned brass pens).
-- Pakistan Domestic Logistics: TCS Express, Leopards Courier, M&P Courier, Pakistan Post. Free delivery on orders above PKR 10,000. Express shipping delivery time: 1-3 business days across Pakistan.
-- International Delivery: DHL Express & FedEx International (3-6 business days).
-- Payment Methods:
-  1. Cash on Delivery (COD) across Pakistan.
-  2. NayaPay Verified Business.
-  3. RAAST Instant & IBAN Bank Transfer.
-  (Orders remain PENDING_VERIFICATION until TID is verified by store administration).
-- Returns & Warranty: 30-day white-glove inspection & return policy, 100% authenticity guarantee, 2-year warranty on mechanical timepieces.
-
-Official Helpline Contact Channels (Share these when the user asks or needs human assistance):
-- WhatsApp 24/7 Helpline: +92 300 8472911 (direct link: https://wa.me/923008472911)
-- Email Concierge: concierge@atelieraurelia.com (and support@atelieraurelia.com)
-- Helpline Phone Line: +92 (042) 3578-9000
-- Pakistan Toll-Free: 0800-2873542 (0800-AURELIA)
-- Operating Hours: 24/7 VIP Concierge & Client Desk
-
-App Installation on Any System (Laptop, PC, Android, iPhone):
-- The app is an installable PWA that works on all systems without needing an app store download:
-  - Laptop / PC: Click "Install App" in the top bar or click the install icon in the browser address bar.
-  - Android Mobile: Tap "Install App" or tap 3 dots (⋮) in Chrome > "Install app / Add to Home screen".
-  - iPhone / iPad: Open in Safari, tap the Share icon [↑], select "Add to Home Screen", then tap "Add".
-- Explain these simple instructions whenever someone asks how to install or download the app.
+Store Details:
+- Store Name: ${storeName}
+${storeTagline ? `- Tagline: ${storeTagline}` : ''}
+${currency ? `- Store Currency: ${currency}` : ''}
+${address ? `- Physical Address: ${address}` : ''}
+${whatsapp ? `- WhatsApp Helpline: ${whatsapp}` : ''}
+${email ? `- Support Email: ${email}` : ''}
+${phone ? `- Phone Number: ${phone}` : ''}
+${bankDetails ? `- Bank Details: ${bankDetails}` : ''}
+${raastDetails ? `- Raast: ${raastDetails}` : ''}
+${nayapayDetails ? `- NayaPay: ${nayapayDetails}` : ''}
+- Payment Methods: Cash on Delivery (COD), Bank Transfer, Raast, NayaPay.
 
 Guidelines:
 - Keep responses concise, clear, and actionable.
-- If the customer asks about an order (e.g. \${orderNumber || 'order number'}), reassure them and explain that tracking notifications are dispatched via SMS & Email upon courier pickup.
-- Provide direct WhatsApp or Helpline details whenever someone wants to speak with an agent or place a custom order.`;
+- If the customer asks about an order (e.g. ${orderNumber || 'order number'}), explain order tracking.
+${whatsapp ? `- Provide WhatsApp details (${whatsapp}) if they ask to speak with an agent.` : ''}`;
 
     const formattedContents: any[] = [];
     if (Array.isArray(history) && history.length > 0) {
@@ -3129,8 +3081,9 @@ Guidelines:
     }
 
     if (!reply) {
-      reply =
-        'Assalam o Alaikum! Atelier Aurelia Concierge is at your service. For immediate personal assistance, our team is directly available on WhatsApp (+92 300 8472911) and email (concierge@atelieraurelia.com).';
+      reply = whatsapp
+        ? `Assalam o Alaikum! Welcome to ${storeName} support. Our team is available on WhatsApp (${whatsapp}) and email (${email || 'support'}).`
+        : `Assalam o Alaikum! Welcome to ${storeName} support. How may we assist you today?`;
     }
 
     // Automatically record live customer chat into Inbox
@@ -3141,7 +3094,7 @@ Guidelines:
         id: chatId,
         ticketNumber: chatTicketNumber,
         name: req.body.customerName || 'Storefront Visitor',
-        email: req.body.customerEmail || 'visitor@atelieraurelia.store',
+        email: req.body.customerEmail || 'visitor@example.com',
         phone: req.body.customerPhone,
         orderNumber: orderNumber ? String(orderNumber).trim() : undefined,
         category: 'LIVE_AI_CHAT',
@@ -3165,28 +3118,31 @@ Guidelines:
       suggestedActions: [
         '📱 Install App on PC / Mobile',
         'Track an Order',
-        'Chat on WhatsApp (+92 300 8472911)',
+        whatsapp ? `Chat on WhatsApp (${whatsapp})` : 'Contact Helpline',
         'Payment Methods in Pakistan',
-        'Bespoke & Custom Requests',
+        'Shipping & Delivery Times',
       ],
     });
   } catch (err: any) {
     console.error('[Customer Support AI Error]:', err);
     res.status(500).json({
       success: false,
-      error: 'Concierge is momentarily experiencing high volume.',
-      fallbackReply: 'Thank you for contacting Atelier Aurelia Helpline. Our team is available 24/7 on WhatsApp (+92 300 8472911) and email (concierge@atelieraurelia.com). You may also submit an inquiry ticket through our helpline form.',
+      error: 'Support desk is momentarily experiencing high volume.',
+      fallbackReply: 'Thank you for reaching out to our customer support. Please contact us via WhatsApp or submit an inquiry ticket through our form.',
     });
   }
 });
 
 // POST /api/helpline/contact-ticket (Log customer inquiry ticket and trigger Instant AI Auto-Reply)
 app.post('/api/helpline/contact-ticket', async (req, res) => {
-  const { name, email, phone, orderNumber, category, subject, message, channel } = req.body;
+  const { name, email, phone, orderNumber, category, subject, message, channel, settings: clientSettings } = req.body;
   if (!name || !email || !message) {
     return res.status(400).json({ error: 'Name, email, and message are required.' });
   }
 
+  const store = clientSettings || {};
+  const storeName = store.storeName || 'Store';
+  const whatsapp = store.helplineWhatsAppFormatted || store.helplineWhatsApp || '';
   const id = 'tkt-' + Date.now();
   const ticketNumber = 'TKT-2026-' + Math.floor(1000 + Math.random() * 9000);
 
@@ -3194,9 +3150,9 @@ app.post('/api/helpline/contact-ticket', async (req, res) => {
   let aiAutoReply = '';
   try {
     const ai = getGenAIClient();
-    const autoReplyPrompt = `You are the Autonomous AI Client Concierge for Atelier Aurelia, a premier luxury commerce house.
+    const autoReplyPrompt = `You are the customer support assistant for ${storeName}.
 A customer has just submitted an inquiry/message through our customer helpline or storefront.
-Your job is to IMMEDIATELY write an elegant, helpful, personalized luxury auto-reply to the customer.
+Your job is to write a polite, helpful, personalized auto-reply to the customer.
 
 Customer Details:
 - Name: ${name}
@@ -3209,10 +3165,10 @@ Customer Details:
 
 Auto-Reply Rules:
 1. Language matching: If customer wrote in Urdu or Roman Urdu (e.g. "mera order...", "kya yeh available hai?", "delivery kab hogi?"), reply in fluent, polite Roman Urdu or Urdu! If English, reply in English.
-2. Address their question directly (order tracking time via TCS/Leopards in Pakistan, Cash on Delivery rules, JazzCash/advance payment verification, sizing, returns, or bespoke engraving).
+2. Address their question directly regarding order tracking, payment methods, delivery times, or questions.
 3. Reassure the customer that their inquiry has been received and logged under Ticket #${ticketNumber}.
-4. Mention that our 24/7 VIP Concierge team is also directly reachable on WhatsApp (+92 300 8472911).
-5. Keep it warm, refined, concise (2-3 short paragraphs), and sign off as "Atelier Aurelia Client Concierge".`;
+${whatsapp ? `4. Mention that our support team is also reachable on WhatsApp (${whatsapp}).` : ''}
+5. Keep it warm, concise (2 short paragraphs), and sign off as "${storeName} Support Team".`;
 
     const modelsToTry = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
     for (const modelName of modelsToTry) {
@@ -3235,7 +3191,7 @@ Auto-Reply Rules:
   }
 
   if (!aiAutoReply) {
-    aiAutoReply = `Dear ${name}, Assalam o Alaikum & Thank you for reaching out to Atelier Aurelia. We have logged your inquiry (Ticket #${ticketNumber}) regarding "${subject || 'your request'}". Our client concierge team is reviewing your details. For instantaneous assistance, our VIP Concierge desk is standing by on WhatsApp (+92 300 8472911). Warm regards, Atelier Aurelia Client Concierge.`;
+    aiAutoReply = `Dear ${name}, Assalam o Alaikum & Thank you for reaching out to ${storeName}. We have logged your inquiry (Ticket #${ticketNumber}) regarding "${subject || 'your request'}". Our team is reviewing your details and will follow up shortly.${whatsapp ? ` You may also reach us directly on WhatsApp at ${whatsapp}.` : ''} Warm regards, ${storeName} Support Team.`;
   }
 
   const ticket: CustomerTicket = {
@@ -3332,7 +3288,7 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Atelier Aurelia server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 

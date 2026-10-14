@@ -16,6 +16,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useStore } from '../context/StoreContext';
 
 interface PWAInstallModalProps {
   isOpen: boolean;
@@ -28,12 +29,16 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   onClose,
   defaultTab,
 }) => {
+  const { settings } = useStore();
   const { isInstallable, isInstalled, isIOS, isAndroid, isDesktop, install } = usePWAInstall();
 
   // Set active tab based on detected platform or prop
   const [activeTab, setActiveTab] = useState<'desktop' | 'android' | 'ios'>('desktop');
   const [isInstalling, setIsInstalling] = useState(false);
   const [installSuccess, setInstallSuccess] = useState(false);
+
+  const storeName = settings?.storeName || 'Store';
+  const logoInitial = storeName.slice(0, 2).toUpperCase();
 
   useEffect(() => {
     if (defaultTab) {
@@ -65,7 +70,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Install Atelier Aurelia App"
+      aria-label={`Install ${storeName} App`}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-150"
     >
       <div className="bg-[#FBFBF9] text-[#141413] w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-black/15 rounded-xl overflow-hidden animate-in zoom-in-95 duration-150">
@@ -73,12 +78,12 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         <div className="bg-[#141413] text-[#FBFBF9] px-5 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#C5A059]/20 border border-[#C5A059]/40 flex items-center justify-center text-[#EED9A8] shrink-0 font-display font-bold text-base">
-              AA
+              {logoInitial}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-display font-semibold text-base sm:text-lg tracking-tight">
-                  Install Atelier Aurelia App
+                  Install {storeName} App
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-medium border border-emerald-500/30">
                   Universal PWA
@@ -178,7 +183,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                 App Successfully Installed!
               </h4>
               <p className="text-xs text-black/60 max-w-sm mx-auto">
-                Atelier Aurelia is now added to your system applications. You can launch it
+                {storeName} is now added to your system applications. You can launch it
                 anytime from your desktop or home screen!
               </p>
             </div>
@@ -224,7 +229,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                             </li>
                             <li>
                               Or click the browser menu <strong>(⋮ or ⋯)</strong> &gt;{' '}
-                              <strong>&quot;Install Atelier Aurelia&quot;</strong>.
+                              <strong>&quot;Install {storeName}&quot;</strong>.
                             </li>
                             <li>
                               Click <strong>&quot;Install&quot;</strong> to place an icon on your Desktop &amp; Start menu.

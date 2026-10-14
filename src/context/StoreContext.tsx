@@ -144,7 +144,6 @@ interface StoreContextValue {
   recordAuditLog: (action: string, resource: string, details?: string) => Promise<void>;
   createOrUpdateAITask: (task: Partial<AITask> & { id: string; name: string; toolName: string }) => Promise<AITask>;
   markNotificationRead: (notificationId: string) => Promise<void>;
-  seedInitialDatabaseIfEmpty: () => Promise<void>;
 
   // Active Context for AI Memory
   selectedAdminProduct: Product | null;
@@ -158,10 +157,11 @@ interface StoreContextValue {
 
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'atelier_aurelia_cart_v1';
-const WISHLIST_STORAGE_KEY = 'atelier_aurelia_wishlist_v1';
-const PRODUCTS_STORAGE_KEY = 'atelier_aurelia_products_v1';
-const CATEGORIES_STORAGE_KEY = 'atelier_aurelia_categories_v1';
+const CART_STORAGE_KEY = 'store_cart_v1';
+const WISHLIST_STORAGE_KEY = 'store_wishlist_v1';
+const PRODUCTS_STORAGE_KEY = 'store_products_v1';
+const CATEGORIES_STORAGE_KEY = 'store_categories_v1';
+const SETTINGS_STORAGE_KEY = 'store_settings_config';
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -173,7 +173,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem(PRODUCTS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // ignore
@@ -186,7 +186,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem(CATEGORIES_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {
       // ignore
@@ -202,7 +202,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [notifications, setNotifications] = useState<StoreNotification[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(() => {
     try {
-      const saved = localStorage.getItem('atelier_aurelia_store_settings');
+      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
       return saved ? { ...INITIAL_SETTINGS, ...JSON.parse(saved) } : INITIAL_SETTINGS;
     } catch {
       return INITIAL_SETTINGS;
@@ -221,9 +221,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [wishlist, setWishlist] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(WISHLIST_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : ['prod-01', 'prod-02'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['prod-01', 'prod-02'];
+      return [];
     }
   });
 
@@ -277,30 +277,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [categories]);
 
-  // 0. Persistent Server Catalog Hydration (Guarantees CSV imports and products never disappear on refresh)
+  // 0. Persistent Server Catalog Hydration
   useEffect(() => {
     const hydrateServerCatalog = async () => {
       try {
         const prodRes = await fetch('/api/catalog/products');
         if (prodRes.ok) {
           const prodData = await prodRes.json();
-          if (Array.isArray(prodData.products) && prodData.products.length > 0) {
-            setProducts((prev) => {
-              const serverMap = new Map<string, Product>();
-              prodData.products.forEach((p: Product) => {
-                if (p && p.id) serverMap.set(p.id, p);
-              });
-              prev.forEach((p) => {
-                if (p && p.id && !serverMap.has(p.id)) {
-                  serverMap.set(p.id, p);
-                }
-              });
-              const merged = Array.from(serverMap.values());
-              try {
-                localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(merged));
-              } catch {}
-              return merged;
-            });
+          if (Array.isArray(prodData.products)) {
+            setProducts(prodData.products);
+            try {
+              localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(prodData.products));
+            } catch {}
           }
         }
       } catch (e) {
@@ -311,17 +299,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const catRes = await fetch('/api/catalog/categories');
         if (catRes.ok) {
           const catData = await catRes.json();
-          if (Array.isArray(catData.categories) && catData.categories.length > 0) {
-            setCategories((prev) => {
-              const catMap = new Map<string, Category>();
-              prev.forEach((c) => catMap.set(c.id, c));
-              catData.categories.forEach((c: Category) => catMap.set(c.id, c));
-              const merged = Array.from(catMap.values());
-              try {
-                localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(merged));
-              } catch {}
-              return merged;
-            });
+          if (Array.isArray(catData.categories)) {
+            setCategories(catData.categories);
+            try {
+              localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(catData.categories));
+            } catch {}
           }
         }
       } catch (e) {
@@ -354,7 +336,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const newProfile: UserProfile = {
               uid: user.uid,
               email: (user.email || '').slice(0, 250),
-              name: (user.displayName || user.email?.split('@')[0] || 'Atelier Client').slice(0, 110),
+              name: (user.displayName || user.email?.split('@')[0] || 'Customer').slice(0, 110),
               role: 'CUSTOMER',
               createdAt: new Date().toISOString(),
             };
@@ -372,98 +354,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => unsubscribe();
   }, []);
 
-  // 2. Seed initial catalog into Firestore if empty when Admin signs in
-  const seedInitialDatabaseIfEmpty = async () => {
-    if (!auth.currentUser) return;
-    try {
-      const q = query(collection(db, 'products'), where('status', '==', 'ACTIVE'));
-      const snap = await getDocs(q);
-      if (snap.empty && isAdmin) {
-        // Seed Settings
-        await setDoc(doc(db, 'settings', INITIAL_SETTINGS.id), INITIAL_SETTINGS);
-        // Seed Categories
-        for (const cat of INITIAL_CATEGORIES) {
-          await setDoc(doc(db, 'categories', cat.id), cat);
-        }
-        // Seed Coupons
-        for (const coup of INITIAL_COUPONS) {
-          await setDoc(doc(db, 'coupons', coup.id), coup);
-        }
-        // Seed Products
-        for (const prod of INITIAL_PRODUCTS) {
-          await setDoc(doc(db, 'products', prod.id), prod);
-        }
-        // Seed Reviews
-        for (const rev of INITIAL_REVIEWS) {
-          await setDoc(doc(db, 'reviews', rev.id), rev);
-        }
-        // Seed Sample Orders for real analytics
-        const demoOrders: Order[] = [
-          {
-            id: 'ord-1041',
-            orderNumber: 'ORD-1041',
-            userId: auth.currentUser.uid,
-            customerName: 'Clara Vance',
-            customerEmail: 'clara.vance@zurich-arch.ch',
-            status: 'DELIVERED',
-            paymentStatus: 'PAID',
-            paymentMethod: 'BANK_TRANSFER',
-            subtotal: 1480,
-            discount: 0,
-            tax: 125.8,
-            shippingFee: 0,
-            total: 1605.8,
-            shippingAddressSummary: 'Bahnhofstrasse 42, 8001 Zürich, Switzerland',
-            trackingNumber: 'DHL-994827104',
-            createdAt: '2026-10-03T11:30:00.000Z',
-          },
-          {
-            id: 'ord-1042',
-            orderNumber: 'ORD-1042',
-            userId: auth.currentUser.uid,
-            customerName: 'Henrik Lindqvist',
-            customerEmail: 'h.lindqvist@nordicventures.se',
-            status: 'PROCESSING',
-            paymentStatus: 'PAID',
-            paymentMethod: 'BANK_TRANSFER',
-            subtotal: 4250,
-            discount: 100,
-            tax: 352.75,
-            shippingFee: 0,
-            total: 4502.75,
-            couponCode: 'PRIVATE100',
-            shippingAddressSummary: 'Strandvägen 7A, 114 56 Stockholm, Sweden',
-            createdAt: '2026-10-06T16:45:00.000Z',
-          },
-          {
-            id: 'ord-1043',
-            orderNumber: 'ORD-1043',
-            userId: auth.currentUser.uid,
-            customerName: 'Julien Marchand',
-            customerEmail: 'j.marchand@galerie-paris.fr',
-            status: 'PENDING',
-            paymentStatus: 'PENDING',
-            paymentMethod: 'COD',
-            subtotal: 1185,
-            discount: 0,
-            tax: 100.73,
-            shippingFee: 0,
-            total: 1285.73,
-            shippingAddressSummary: '24 Rue du Faubourg Saint-Honoré, 75008 Paris',
-            createdAt: '2026-10-07T08:15:00.000Z',
-          },
-        ];
-        for (const ord of demoOrders) {
-          await setDoc(doc(db, 'orders', ord.id), ord);
-        }
-        showToast('Store database initialized with luxury catalog & telemetry.');
-      }
-    } catch (error) {
-      console.warn('Database seed check skipped or already populated:', error);
-    }
-  };
-
-  // 3. Public Catalog Listeners (Products, Categories, Coupons, Approved Reviews, Settings)
+  // 2. Public Catalog Listeners (Products, Categories, Coupons, Approved Reviews, Settings)
   useEffect(() => {
     if (!authReady) return;
 
@@ -474,36 +365,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unsubProducts = onSnapshot(
       prodQuery,
       (snap) => {
-        if (!snap.empty) {
-          const firestoreList = snap.docs.map((d) => d.data() as Product);
-          setProducts((prev) => {
-            const firestoreIds = new Set(firestoreList.map((p) => p.id));
-            const firestoreSkus = new Set(firestoreList.map((p) => p.sku.toLowerCase()));
-            const localOnly = prev.filter(
-              (p) => !firestoreIds.has(p.id) && !firestoreSkus.has(p.sku.toLowerCase())
-            );
-            const merged = [...firestoreList, ...localOnly];
-            merged.sort((a, b) => a.id.localeCompare(b.id));
-            try {
-              localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(merged));
-            } catch {}
-            return merged;
-          });
-        } else if (isAdmin) {
-          seedInitialDatabaseIfEmpty();
-        }
+        const firestoreList = snap.docs.map((d) => d.data() as Product);
+        setProducts(firestoreList);
+        try {
+          localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(firestoreList));
+        } catch {}
       },
       (err) => {
-        console.warn('Products listener fallback to cached/initial catalog:', err.message);
+        console.warn('Products listener error:', err.message);
       }
     );
 
     const unsubCategories = onSnapshot(
        query(collection(db, 'categories'), where('slug', '>=', '')),
       (snap) => {
-        if (!snap.empty) {
-          setCategories(snap.docs.map((d) => d.data() as Category));
-        }
+        const list = snap.docs.map((d) => d.data() as Category);
+        setCategories(list);
+        try {
+          localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(list));
+        } catch {}
       },
       () => {}
     );
@@ -515,9 +395,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unsubCoupons = onSnapshot(
       coupQuery,
       (snap) => {
-        if (!snap.empty) {
-          setCoupons(snap.docs.map((d) => d.data() as Coupon));
-        }
+        setCoupons(snap.docs.map((d) => d.data() as Coupon));
       },
       () => {}
     );
@@ -529,9 +407,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unsubReviews = onSnapshot(
       revQuery,
       (snap) => {
-        if (!snap.empty) {
-          setReviews(snap.docs.map((d) => d.data() as Review));
-        }
+        setReviews(snap.docs.map((d) => d.data() as Review));
       },
       () => {}
     );
@@ -540,7 +416,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       doc(db, 'settings', 'store_config'),
       (snap) => {
         if (snap.exists()) {
-          setSettings(snap.data() as StoreSettings);
+          const data = snap.data() as StoreSettings;
+          setSettings(data);
+          try {
+            localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
+          } catch {}
         }
       },
       () => {}
@@ -630,7 +510,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const signInWithGoogle = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      showToast('Signed in to Atelier Aurelia.');
+      showToast('Signed in successfully.');
     } catch (error: any) {
       console.error('Sign-in failed:', error);
       showToast(error?.message || 'Authentication cancelled.');
@@ -912,7 +792,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextOrderStatus: OrderStatus = serverVerification?.newOrderStatus || (action === 'APPROVE' ? 'CONFIRMED' : 'CANCELLED');
 
     let approvedReceiptHtml = target.paymentReceiptEmailHtml || '';
-    let approvedSubject = target.paymentReceiptEmailSubject || `Payment Recieved: Order #${target.orderNumber} | ${settings.storeName || 'Atelier Aurelia'}`;
+    let approvedSubject = target.paymentReceiptEmailSubject || `Payment Received: Order #${target.orderNumber} | ${settings.storeName || 'Store'}`;
 
     if (action === 'APPROVE') {
       try {
@@ -927,7 +807,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             toEmail: target.customerEmail,
             customerName: target.customerName,
             orderNumber: target.orderNumber,
-            storeName: settings.storeName || 'Atelier Aurelia',
+            storeName: settings.storeName || 'Store',
             paymentMethod: target.paymentMethod,
             paymentSubMethod: target.paymentSubMethod,
             paymentReference: target.paymentReference || 'Bank / Wallet Reconciled',
@@ -1169,18 +1049,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const cleanProduct: Product = {
       id: prodId,
-      sku: sanitizeSku(input.sku || existingProd?.sku || `AA-${Date.now().toString().slice(-5)}`),
-      name: (input.name || existingProd?.name || 'Untitled Atelier Piece').slice(0, 195),
+      sku: sanitizeSku(input.sku || existingProd?.sku || `SKU-${Date.now().toString().slice(-5)}`),
+      name: (input.name || existingProd?.name || 'Untitled Product').slice(0, 195),
       slug: sanitizeSlug(input.slug || input.name || existingProd?.slug || prodId),
       shortDescription: (
         input.shortDescription ??
         existingProd?.shortDescription ??
-        'Handcrafted architectural luxury piece from Atelier Aurelia.'
+        ''
       ).slice(0, 490),
       description: (
         input.description ??
         existingProd?.description ??
-        'Crafted from noble materials with bespoke artisan finishing.'
+        ''
       ).slice(0, 4900),
       price: Math.max(0, Number(input.price ?? existingProd?.price ?? 0)),
       compareAtPrice: Math.max(
@@ -1197,25 +1077,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         1,
         Math.round(Number(input.lowStockThreshold ?? existingProd?.lowStockThreshold ?? 5))
       ),
-      category: (input.category || existingProd?.category || 'Leather Goods').slice(0, 75),
-      subcategory: (input.subcategory || existingProd?.subcategory || 'Limited Edition').slice(0, 75),
-      brand: (input.brand || existingProd?.brand || 'Atelier Aurelia').slice(0, 75),
+      category: (input.category || existingProd?.category || 'General').slice(0, 75),
+      subcategory: (input.subcategory || existingProd?.subcategory || 'Standard').slice(0, 75),
+      brand: (input.brand || existingProd?.brand || settings.storeName || 'Store Brand').slice(0, 75),
       status: input.status || existingProd?.status || 'ACTIVE',
       featured: Boolean(input.featured ?? existingProd?.featured ?? false),
       bestSeller: Boolean(input.bestSeller ?? existingProd?.bestSeller ?? false),
       newArrival: Boolean(input.newArrival ?? existingProd?.newArrival ?? true),
-      seoTitle: (input.seoTitle ?? existingProd?.seoTitle ?? `${input.name} | Atelier Aurelia`).slice(0, 155),
+      seoTitle: (input.seoTitle ?? existingProd?.seoTitle ?? `${input.name} | ${settings.storeName || 'Store'}`).slice(0, 155),
       seoDescription: (
         input.seoDescription ??
         existingProd?.seoDescription ??
-        (input.shortDescription || `Discover ${input.name} handcrafted by Atelier Aurelia.`)
+        (input.shortDescription || `Discover ${input.name} from ${settings.storeName || 'our store'}.`)
       ).slice(0, 310),
       seoKeywords: (
         input.seoKeywords ??
         existingProd?.seoKeywords ??
-        `${input.category?.toLowerCase()}, luxury, atelier aurelia`
+        `${input.category?.toLowerCase() || 'product'}, ${settings.storeName?.toLowerCase() || 'store'}`
       ).slice(0, 390),
-      primaryImage: (input.primaryImage || existingProd?.primaryImage || IMG_HANDBAG).slice(0, 980),
+      primaryImage: (input.primaryImage || existingProd?.primaryImage || '').slice(0, 980),
       rating: Number(input.rating ?? existingProd?.rating ?? 5.0),
       reviewCount: Math.round(Number(input.reviewCount ?? existingProd?.reviewCount ?? 1)),
       weightKg: Number(input.weightKg ?? existingProd?.weightKg ?? 0.8),
